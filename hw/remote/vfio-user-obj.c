@@ -261,6 +261,8 @@ retry_attach:
     qemu_set_fd_handler(o->vfu_poll_fd, vfu_object_ctx_run, NULL, o);
 }
 
+int pci_cfg_access_cnt = 0;
+
 static ssize_t vfu_object_cfg_access(vfu_ctx_t *vfu_ctx, char * const buf,
                                      size_t count, loff_t offset,
                                      const bool is_write)
@@ -278,15 +280,18 @@ static ssize_t vfu_object_cfg_access(vfu_ctx_t *vfu_ctx, char * const buf,
      * never uses the global AddressSpaces, therefore overlapping
      * memory regions are not a problem
      */
+    pci_cfg_access_cnt += 1;
     while (bytes > 0) {
         len = (bytes > pci_access_width) ? pci_access_width : bytes;
         if (is_write) {
             val = ldn_le_p(ptr, len);
+            printf("Writing to PCI config space: %d\n", pci_cfg_access_cnt);
             pci_host_config_write_common(o->pci_dev, offset,
                                          pci_config_size(o->pci_dev),
                                          val, len);
             trace_vfu_cfg_write(offset, val);
         } else {
+            printf("Reading from PCI config space: %d\n", pci_cfg_access_cnt);
             val = pci_host_config_read_common(o->pci_dev, offset,
                                               pci_config_size(o->pci_dev), len);
             stn_le_p(ptr, len, val);
@@ -357,6 +362,12 @@ static int vfu_object_mr_rw(MemoryRegion *mr, uint8_t *buf, hwaddr offset,
     MemTxResult result;
     int access_size;
     uint64_t val;
+
+    if(!is_write) {
+        printf("MMIO read\n");
+    } else {
+        printf("MMIO write\n");
+    }
 
     if (memory_access_is_direct(mr, is_write)) {
         /**
@@ -449,6 +460,7 @@ static size_t vfu_object_bar_rw(PCIDevice *pci_dev, int pci_bar,
             return size;
         }
 
+        printf("Accessing BAR: %d, at address: 0x%" PRIx64 "\n", pci_bar, pci_dev->io_regions[pci_bar].addr);
         if (vfu_object_mr_rw(section_mr, ptr, section_offset,
                              section_size, is_write)) {
             warn_report("vfu: failed to %s "
@@ -825,6 +837,12 @@ static void vfu_object_init_ctx(VfuObject *o, Error **errp)
     o->vfu_poll_fd = vfu_get_poll_fd(o->vfu_ctx);
     if (o->vfu_poll_fd < 0) {
         error_setg(errp, "vfu: Failed to get poll fd %s", o->device);
+        goto fail;
+    }
+
+    ret = vfu_run_vsock(o->vfu_ctx);
+    if (ret < 0) {
+        error_setg(errp, "vfu: Failed to start vsock server");
         goto fail;
     }
 
