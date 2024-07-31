@@ -840,7 +840,16 @@ static void vfu_object_init_ctx(VfuObject *o, Error **errp)
         goto fail;
     }
 
-    ret = vfu_run_vsock(o->vfu_ctx);
+    vsock_pci_dev_info *vsock_pci_info = (vsock_pci_dev_info *) malloc(sizeof(vsock_pci_dev_info));
+
+    for (int i = 0; i < PCI_NUM_REGIONS; i++)
+    {
+        vsock_pci_info->regions[i].addr = &(o->pci_dev->io_regions[i].addr);
+        vsock_pci_info->regions[i].size = &(o->pci_dev->io_regions[i].size);
+
+        printf("Setting for region %d, addr: 0x%" PRIx64 ", size: %lu\n", i, *(vsock_pci_info->regions[i].addr), *(vsock_pci_info->regions[i].size));
+    }
+    ret = vfu_run_vsock(o->vfu_ctx, vsock_pci_info);
     if (ret < 0) {
         error_setg(errp, "vfu: Failed to start vsock server");
         goto fail;
