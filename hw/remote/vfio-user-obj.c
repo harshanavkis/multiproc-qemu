@@ -285,13 +285,13 @@ static ssize_t vfu_object_cfg_access(vfu_ctx_t *vfu_ctx, char * const buf,
         len = (bytes > pci_access_width) ? pci_access_width : bytes;
         if (is_write) {
             val = ldn_le_p(ptr, len);
-            printf("Writing to PCI config space: %d\n", pci_cfg_access_cnt);
+            printf("vfio-user-obj.c: Writing to PCI config space: %d\n", pci_cfg_access_cnt);
             pci_host_config_write_common(o->pci_dev, offset,
                                          pci_config_size(o->pci_dev),
                                          val, len);
             trace_vfu_cfg_write(offset, val);
         } else {
-            printf("Reading from PCI config space: %d\n", pci_cfg_access_cnt);
+            printf("vfio-user-obj.c: Reading from PCI config space: %d\n", pci_cfg_access_cnt);
             val = pci_host_config_read_common(o->pci_dev, offset,
                                               pci_config_size(o->pci_dev), len);
             stn_le_p(ptr, len, val);
@@ -364,9 +364,9 @@ static int vfu_object_mr_rw(MemoryRegion *mr, uint8_t *buf, hwaddr offset,
     uint64_t val;
 
     if(!is_write) {
-        printf("MMIO read\n");
+        printf("vfio-user-obj.c: MMIO read\n");
     } else {
-        printf("MMIO write\n");
+        printf("vfio-user-obj.c: MMIO write\n");
     }
 
     if (memory_access_is_direct(mr, is_write)) {
@@ -460,7 +460,7 @@ static size_t vfu_object_bar_rw(PCIDevice *pci_dev, int pci_bar,
             return size;
         }
 
-        printf("Accessing BAR: %d, at address: 0x%" PRIx64 "\n", pci_bar, pci_dev->io_regions[pci_bar].addr);
+        printf("vfio-user-obj.c: Accessing BAR: %d, at address: 0x%" PRIx64 "\n", pci_bar, pci_dev->io_regions[pci_bar].addr);
         if (vfu_object_mr_rw(section_mr, ptr, section_offset,
                              section_size, is_write)) {
             warn_report("vfu: failed to %s "
@@ -842,12 +842,16 @@ static void vfu_object_init_ctx(VfuObject *o, Error **errp)
 
     vsock_pci_dev_info *vsock_pci_info = (vsock_pci_dev_info *) malloc(sizeof(vsock_pci_dev_info));
 
+    vsock_pci_info->vctx = o->vfu_ctx;
+
+    printf("vfio-user-obj.c: vfu_ctx: uuid: %s\n", get_vfu_ctx_uuid(o->vfu_ctx));
+
     for (int i = 0; i < PCI_NUM_REGIONS; i++)
     {
         vsock_pci_info->regions[i].addr = &(o->pci_dev->io_regions[i].addr);
         vsock_pci_info->regions[i].size = &(o->pci_dev->io_regions[i].size);
 
-        printf("Setting for region %d, addr: 0x%" PRIx64 ", size: %lu\n", i, *(vsock_pci_info->regions[i].addr), *(vsock_pci_info->regions[i].size));
+        printf("vfio-user-obj.c: Setting for region %d, addr: 0x%" PRIx64 ", size: %lu\n", i, *(vsock_pci_info->regions[i].addr), *(vsock_pci_info->regions[i].size));
     }
     ret = vfu_run_vsock(o->vfu_ctx, vsock_pci_info);
     if (ret < 0) {
