@@ -840,22 +840,28 @@ static void vfu_object_init_ctx(VfuObject *o, Error **errp)
         goto fail;
     }
 
-    vsock_pci_dev_info *vsock_pci_info = (vsock_pci_dev_info *) malloc(sizeof(vsock_pci_dev_info));
+    disagg_pci_dev_info *disagg_pci_info = (disagg_pci_dev_info *) malloc(sizeof(disagg_pci_dev_info));
 
-    vsock_pci_info->vctx = o->vfu_ctx;
+    disagg_pci_info->vctx = o->vfu_ctx;
 
     printf("vfio-user-obj.c: vfu_ctx: uuid: %s\n", get_vfu_ctx_uuid(o->vfu_ctx));
 
     for (int i = 0; i < PCI_NUM_REGIONS; i++)
     {
-        vsock_pci_info->regions[i].addr = &(o->pci_dev->io_regions[i].addr);
-        vsock_pci_info->regions[i].size = &(o->pci_dev->io_regions[i].size);
+        disagg_pci_info->regions[i].addr = &(o->pci_dev->io_regions[i].addr);
+        disagg_pci_info->regions[i].size = &(o->pci_dev->io_regions[i].size);
 
-        printf("vfio-user-obj.c: Setting for region %d, addr: 0x%" PRIx64 ", size: %lu\n", i, *(vsock_pci_info->regions[i].addr), *(vsock_pci_info->regions[i].size));
+        printf("vfio-user-obj.c: Setting for region %d, addr: 0x%" PRIx64 ", size: %lu\n", i, *(disagg_pci_info->regions[i].addr), *(disagg_pci_info->regions[i].size));
     }
-    ret = vfu_run_vsock(o->vfu_ctx, vsock_pci_info);
+    // ret = vfu_run_vsock(o->vfu_ctx, disagg_pci_info);
+    // if (ret < 0) {
+    //     error_setg(errp, "vfu: Failed to start vsock server");
+    //     goto fail;
+    // }
+
+    ret = vfu_run_shmem(o->vfu_ctx, disagg_pci_info);
     if (ret < 0) {
-        error_setg(errp, "vfu: Failed to start vsock server");
+        error_setg(errp, "vfu: Failed to start shmem server");
         goto fail;
     }
 
