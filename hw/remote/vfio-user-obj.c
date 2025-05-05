@@ -327,7 +327,14 @@ static void dma_register(vfu_ctx_t *vfu_ctx, vfu_dma_info_t *info)
 
     dma_as = pci_device_iommu_address_space(o->pci_dev);
 
-    memory_region_add_subregion(dma_as->root, (hwaddr)iov->iov_base, subregion);
+    // necessary to not fail assertion (added because will propably be set further up the call stuck in normal case)
+    if (bql_locked()) {
+	memory_region_add_subregion(dma_as->root, (hwaddr)iov->iov_base, subregion);
+    } else {
+	bql_lock();
+	memory_region_add_subregion(dma_as->root, (hwaddr)iov->iov_base, subregion);
+	bql_unlock();
+    }
 
     trace_vfu_dma_register((uint64_t)iov->iov_base, iov->iov_len);
 }

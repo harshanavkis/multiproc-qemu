@@ -1,4 +1,4 @@
 [wrap-git]
-url = https://github.com/harshanavkis/libvfio-user
-revision = 776d3204251bc093f10c2b6f693bccc063fe20cf
+url = https://github.com/maxjae/libvfio-user
+revision = 5c03ed46bccf473cbc17e749389249689f8608e8
 
