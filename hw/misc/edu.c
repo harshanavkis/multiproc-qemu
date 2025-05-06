@@ -151,13 +151,17 @@ static void edu_dma_timer(void *opaque)
         uint64_t dst = edu->dma.dst;
         edu_check_range(dst, edu->dma.cnt, DMA_START, DMA_SIZE);
         dst -= DMA_START;
-        pci_dma_read(&edu->pdev, edu_clamp_addr(edu, edu->dma.src),
+	// removed the edu_clamp_addr call for the src address
+	// wouldn't work otherwise, because there wouldn't be enough space in the address space limited to 28bits
+        pci_dma_read(&edu->pdev, edu->dma.src,
                 edu->dma_buf + dst, edu->dma.cnt);
     } else {
         uint64_t src = edu->dma.src;
         edu_check_range(src, edu->dma.cnt, DMA_START, DMA_SIZE);
         src -= DMA_START;
-        pci_dma_write(&edu->pdev, edu_clamp_addr(edu, edu->dma.dst),
+	// removed the edu_clamp_addr call for the dst address
+	// wouldn't work otherwise, because there wouldn't be enough space in the address space limited to 28bits
+        pci_dma_write(&edu->pdev, edu->dma.dst,
                 edu->dma_buf + src, edu->dma.cnt);
     }
 
