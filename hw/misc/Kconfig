@@ -1,3 +1,8 @@
+config DISAGG_FAKE_PCI
+    bool
+    default y if PCI_DEVICES
+    depends on PCI
+
 config APPLESMC
     bool
     depends on ISA_BUS
